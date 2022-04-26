@@ -42,9 +42,11 @@ in the file that seems to be the answer...?
                     }
                 }
                 echo "BRANCH_NAME = ${env.BRANCH_NAME}"
+                
+                echo "TAG_NAME = ${env.TAG_NAME}"
+                
                 //sh 'export BRANCH=${BRANCH_NAME:-\"N.A.\"}'
                 //sh 'echo "$env.BRANCH"'
-                echo "This is the tag ${env.TAG_NAME}"
                 //sh 'echo "This is the git commit ${GIT_COMMIT:-N.A.}"'
             }
         }
