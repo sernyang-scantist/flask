@@ -33,12 +33,12 @@ in the file that seems to be the answer...?
         stage("Env Variables"){
             steps{
                 sh "printenv"
-                //script {
-                  //  if (env.BRANCH_NAME == null) {
-                    //    env.BRANCH_NAME = "N.A."
-                    //}
-                //}
-                echo "BRANCE_NAME = ${env.BRANCH_NAME}"
+                script {
+                    if (env.BRANCH_NAME == null) {
+                        env.BRANCH_NAME = "N.A."
+                    }
+                }
+                echo "BRANCH_NAME = ${env.BRANCH_NAME}"
                 //sh 'export BRANCH=${BRANCH_NAME:-\"N.A.\"}'
                 //sh 'echo "$env.BRANCH"'
                 //sh 'echo "This is the tag ${TAG_NAME:-N.A.}"'
