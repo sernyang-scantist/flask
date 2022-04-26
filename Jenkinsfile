@@ -34,7 +34,7 @@ in the file that seems to be the answer...?
             steps{
                 sh "printenv"
                 sh 'export BRANCH=${BRANCH_NAME:-N.A.}'
-                echo "$env.BRANCH"
+                sh 'echo "$BRANCH"'
                 //sh 'echo "This is the tag ${TAG_NAME:-N.A.}"'
                 //sh 'echo "This is the git commit ${GIT_COMMIT:-N.A.}"'
             }
