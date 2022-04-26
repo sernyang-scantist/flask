@@ -33,10 +33,10 @@ in the file that seems to be the answer...?
         stage("Env Variables"){
             steps{
                 sh "printenv"
-                echo "This is the branch ${BRANCH_NAME:-N.A.}"
-                echo "This is the tag ${TAG_NAME:-N.A.}"
-                echo "This is the git commit ${GIT_COMMIT:-N.A.}"
-                echo "This is the build ID ${BUILD_ID:-N.A.}"                                               
+                echo "This is the branch ${BRANCH_NAME:-N\.A\.}"
+                echo "This is the tag ${TAG_NAME:-N\.A\.}"
+                echo "This is the git commit ${GIT_COMMIT:-N\.A\.}"
+                echo "This is the build ID ${BUILD_ID:-N\.A\.}"                                               
             }
         }
     }
