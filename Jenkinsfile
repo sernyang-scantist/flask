@@ -34,9 +34,8 @@ in the file that seems to be the answer...?
             steps{
                 sh "printenv"
                 sh 'echo "This is the branch ${BRANCH_NAME:-N.A.}"'
-                sh 'echo "This is the tag ${TAG_NAME:-NA}"'
-                sh 'echo "This is the git commit ${GIT_COMMIT:-NA}"'
-                sh 'echo "This is the build ID ${BUILD_ID:-NA}"'
+                sh 'echo "This is the tag ${TAG_NAME:-N.A.}"'
+                sh 'echo "This is the git commit ${GIT_COMMIT:-N.A.}"'
             }
         }
     }
