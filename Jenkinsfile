@@ -32,7 +32,7 @@ in the file that seems to be the answer...?
         }
         stage("Env Variables"){
             steps{
-                bat "set"
+                sh "printenv"
                 echo "This is the branch ${env.BRANCH_NAME}"
                 echo "This is the tag ${env.TAG_NAME}"
                 echo "This is the build ID ${env.BUILD_ID}"                                                     
