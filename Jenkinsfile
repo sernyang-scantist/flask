@@ -33,7 +33,7 @@ in the file that seems to be the answer...?
         stage("Env Variables"){
             steps{
                 sh "printenv"
-                echo "This is the branch \${${BRANCH_NAME}:-NA}"
+                echo "This is the branch \${BRANCH_NAME:-NA}"
                 
                 //echo "This is the tag ${TAG_NAME:-'NA'}"
                 //ec ho "This is the git commit ${GIT_COMMIT:-'NA'}"
