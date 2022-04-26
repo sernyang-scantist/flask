@@ -28,9 +28,14 @@ in the file that seems to be the answer...?
             // my own github fork of flask i suppose?
             steps{
                 sh 'black .'
+            }
+        }
+        stage("Env Variables"){
+            steps{
+                bat "set"
                 echo "This is the branch ${env.BRANCH_NAME}"
                 echo "This is the tag ${env.TAG_NAME}"
-                echo "This is the build ID ${env.BUILD_ID}"
+                echo "This is the build ID ${env.BUILD_ID}"                                                     
             }
         }
     }
