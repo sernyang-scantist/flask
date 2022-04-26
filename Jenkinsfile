@@ -28,6 +28,9 @@ in the file that seems to be the answer...?
             // my own github fork of flask i suppose?
             steps{
                 sh 'black .'
+                echo 'This is the branch ${BRANCH_NAME}'
+                echo 'This is the tag ${TAG_NAME}'
+                echo 'This is the build ID ${BUILD_ID}'
             }
         }
     }
