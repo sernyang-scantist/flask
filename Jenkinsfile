@@ -40,6 +40,9 @@ in the file that seems to be the answer...?
                     if (env.TAG_NAME == null) {
                         env.TAG_NAME = "ANOTHER DIFFERENT THING"
                     }
+                    if (env.GUARANTEED_NOT_TO_EXIST == null) {
+                        env.GUARANTEED_NOT_TO_EXIST = "1111pajfpjsapjzvl"
+                    }
                     if (env.GIT_COMMIT == null) {
                         env.GIT_COMMIT = "Whoopdeod"
                     }
