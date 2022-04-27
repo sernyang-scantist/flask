@@ -40,8 +40,8 @@ in the file that seems to be the answer...?
                     if (env.TAG_NAME == null) {
                         env.TAG_NAME = "ANOTHER DIFFERENT THING"
                     }
-                    if (env.GUARANTEED_NOT_TO_EXIST == null) {
-                        env.GUARANTEED_NOT_TO_EXIST = "1111pajfpjsapjzvl"
+                    if (env.EXTRA_GUARANTEED_NOT_TO_EXIST == null) {
+                        env.EXTRA_GUARANTEED_NOT_TO_EXIST = "1111pajfpjsapjzvl"
                     }
                     if (env.GIT_COMMIT == null) {
                         env.GIT_COMMIT = "Whoopdeod"
@@ -50,6 +50,8 @@ in the file that seems to be the answer...?
                 echo "BRANCH_NAME = ${env.BRANCH_NAME}"
                 
                 echo "TAG_NAME = ${env.TAG_NAME}"
+                
+                echo "guarantor = ${env.EXTRA_GUARANTEED_NOT_TO_EXIST}"
                 
                 //sh 'export BRANCH=${BRANCH_NAME:-\"N.A.\"}'
                 //sh 'echo "$env.BRANCH"'
