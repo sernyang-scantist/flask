@@ -37,8 +37,6 @@ in the file that seems to be the answer...?
                     if (env.BRANCH_NAME == null) {
                         env.BRANCH_NAME = "N.A."
                     }
-//                 }
-//                 script {
                     if (env.TAG_NAME == null) {
                         env.TAG_NAME = "SOEMTHING"
                     }
@@ -49,7 +47,7 @@ in the file that seems to be the answer...?
                 
                 //sh 'export BRANCH=${BRANCH_NAME:-\"N.A.\"}'
                 //sh 'echo "$env.BRANCH"'
-                //sh 'echo "This is the git commit ${GIT_COMMIT:-N.A.}"'
+                echo "This is the git commit ${env.GIT_COMMIT}"
             }
         }
     }
