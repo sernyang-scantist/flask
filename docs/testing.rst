@@ -142,9 +142,9 @@ use ``pathlib.Path`` to get files relative to the current test file.
 
     def test_edit_user(client):
         response = client.post("/user/2/edit", data={
-            name="Flask",
-            theme="dark",
-            picture=(resources / "picture.png").open("rb"),
+            "name": "Flask",
+            "theme": "dark",
+            "picture": (resources / "picture.png").open("rb"),
         })
         assert response.status_code == 200
 
@@ -265,10 +265,10 @@ command from the command line.
         click.echo(f"Hello, {name}!")
 
     def test_hello_command(runner):
-        result = runner.invoke(["hello"])
+        result = runner.invoke(args="hello")
         assert "World" in result.output
 
-        result = runner.invoke(["hello", "--name", "Flask"])
+        result = runner.invoke(args=["hello", "--name", "Flask"])
         assert "Flask" in result.output
 
 

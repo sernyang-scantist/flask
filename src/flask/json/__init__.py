@@ -11,7 +11,7 @@ from werkzeug.http import http_date
 from ..globals import current_app
 from ..globals import request
 
-if t.TYPE_CHECKING:
+if t.TYPE_CHECKING:  # pragma: no cover
     from ..app import Flask
     from ..wrappers import Response
 
@@ -153,7 +153,11 @@ def dump(
     _json.dump(obj, fp, **kwargs)
 
 
-def loads(s: str, app: t.Optional["Flask"] = None, **kwargs: t.Any) -> t.Any:
+def loads(
+    s: t.Union[str, bytes],
+    app: t.Optional["Flask"] = None,
+    **kwargs: t.Any,
+) -> t.Any:
     """Deserialize an object from a string of JSON.
 
     Takes the same arguments as the built-in :func:`json.loads`, with
