@@ -12,23 +12,16 @@ from jinja2 import FileSystemLoader
 from werkzeug.exceptions import default_exceptions
 from werkzeug.exceptions import HTTPException
 
+from . import typing as ft
 from .cli import AppGroup
 from .globals import current_app
 from .helpers import get_root_path
 from .helpers import locked_cached_property
 from .helpers import send_from_directory
 from .templating import _default_template_ctx_processor
-from .typing import AfterRequestCallable
-from .typing import AppOrBlueprintKey
-from .typing import BeforeRequestCallable
-from .typing import TeardownCallable
-from .typing import TemplateContextProcessorCallable
-from .typing import URLDefaultCallable
-from .typing import URLValuePreprocessorCallable
 
 if t.TYPE_CHECKING:  # pragma: no cover
     from .wrappers import Response
-    from .typing import ErrorHandlerCallable
 
 # a singleton sentinel value for parameter defaults
 _sentinel = object()
@@ -37,22 +30,10 @@ F = t.TypeVar("F", bound=t.Callable[..., t.Any])
 
 
 def setupmethod(f: F) -> F:
-    """Wraps a method so that it performs a check in debug mode if the
-    first request was already handled.
-    """
+    f_name = f.__name__
 
     def wrapper_func(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
-        if self._is_setup_finished():
-            raise AssertionError(
-                "A setup function was called after the first request "
-                "was handled. This usually indicates a bug in the"
-                " application where a module was not imported and"
-                " decorators or other functionality was called too"
-                " late.\nTo fix this make sure to import all your view"
-                " modules, database models, and everything related at a"
-                " central place before the application starts serving"
-                " requests."
-            )
+        self._check_setup_finished(f_name)
         return f(self, *args, **kwargs)
 
     return t.cast(F, update_wrapper(wrapper_func, f))
@@ -143,8 +124,8 @@ class Scaffold:
         #: This data structure is internal. It should not be modified
         #: directly and its format may change at any time.
         self.error_handler_spec: t.Dict[
-            AppOrBlueprintKey,
-            t.Dict[t.Optional[int], t.Dict[t.Type[Exception], "ErrorHandlerCallable"]],
+            ft.AppOrBlueprintKey,
+            t.Dict[t.Optional[int], t.Dict[t.Type[Exception], ft.ErrorHandlerCallable]],
         ] = defaultdict(lambda: defaultdict(dict))
 
         #: A data structure of functions to call at the beginning of
@@ -158,7 +139,7 @@ class Scaffold:
         #: This data structure is internal. It should not be modified
         #: directly and its format may change at any time.
         self.before_request_funcs: t.Dict[
-            AppOrBlueprintKey, t.List[BeforeRequestCallable]
+            ft.AppOrBlueprintKey, t.List[ft.BeforeRequestCallable]
         ] = defaultdict(list)
 
         #: A data structure of functions to call at the end of each
@@ -172,7 +153,7 @@ class Scaffold:
         #: This data structure is internal. It should not be modified
         #: directly and its format may change at any time.
         self.after_request_funcs: t.Dict[
-            AppOrBlueprintKey, t.List[AfterRequestCallable]
+            ft.AppOrBlueprintKey, t.List[ft.AfterRequestCallable]
         ] = defaultdict(list)
 
         #: A data structure of functions to call at the end of each
@@ -187,7 +168,7 @@ class Scaffold:
         #: This data structure is internal. It should not be modified
         #: directly and its format may change at any time.
         self.teardown_request_funcs: t.Dict[
-            AppOrBlueprintKey, t.List[TeardownCallable]
+            ft.AppOrBlueprintKey, t.List[ft.TeardownCallable]
         ] = defaultdict(list)
 
         #: A data structure of functions to call to pass extra context
@@ -202,7 +183,7 @@ class Scaffold:
         #: This data structure is internal. It should not be modified
         #: directly and its format may change at any time.
         self.template_context_processors: t.Dict[
-            AppOrBlueprintKey, t.List[TemplateContextProcessorCallable]
+            ft.AppOrBlueprintKey, t.List[ft.TemplateContextProcessorCallable]
         ] = defaultdict(list, {None: [_default_template_ctx_processor]})
 
         #: A data structure of functions to call to modify the keyword
@@ -217,8 +198,8 @@ class Scaffold:
         #: This data structure is internal. It should not be modified
         #: directly and its format may change at any time.
         self.url_value_preprocessors: t.Dict[
-            AppOrBlueprintKey,
-            t.List[URLValuePreprocessorCallable],
+            ft.AppOrBlueprintKey,
+            t.List[ft.URLValuePreprocessorCallable],
         ] = defaultdict(list)
 
         #: A data structure of functions to call to modify the keyword
@@ -233,13 +214,13 @@ class Scaffold:
         #: This data structure is internal. It should not be modified
         #: directly and its format may change at any time.
         self.url_default_functions: t.Dict[
-            AppOrBlueprintKey, t.List[URLDefaultCallable]
+            ft.AppOrBlueprintKey, t.List[ft.URLDefaultCallable]
         ] = defaultdict(list)
 
     def __repr__(self) -> str:
         return f"<{type(self).__name__} {self.name!r}>"
 
-    def _is_setup_finished(self) -> bool:
+    def _check_setup_finished(self, f_name: str) -> None:
         raise NotImplementedError
 
     @property
@@ -376,6 +357,7 @@ class Scaffold:
 
         return self.route(rule, methods=[method], **options)
 
+    @setupmethod
     def get(self, rule: str, **options: t.Any) -> t.Callable[[F], F]:
         """Shortcut for :meth:`route` with ``methods=["GET"]``.
 
@@ -383,6 +365,7 @@ class Scaffold:
         """
         return self._method_route("GET", rule, options)
 
+    @setupmethod
     def post(self, rule: str, **options: t.Any) -> t.Callable[[F], F]:
         """Shortcut for :meth:`route` with ``methods=["POST"]``.
 
@@ -390,6 +373,7 @@ class Scaffold:
         """
         return self._method_route("POST", rule, options)
 
+    @setupmethod
     def put(self, rule: str, **options: t.Any) -> t.Callable[[F], F]:
         """Shortcut for :meth:`route` with ``methods=["PUT"]``.
 
@@ -397,6 +381,7 @@ class Scaffold:
         """
         return self._method_route("PUT", rule, options)
 
+    @setupmethod
     def delete(self, rule: str, **options: t.Any) -> t.Callable[[F], F]:
         """Shortcut for :meth:`route` with ``methods=["DELETE"]``.
 
@@ -404,6 +389,7 @@ class Scaffold:
         """
         return self._method_route("DELETE", rule, options)
 
+    @setupmethod
     def patch(self, rule: str, **options: t.Any) -> t.Callable[[F], F]:
         """Shortcut for :meth:`route` with ``methods=["PATCH"]``.
 
@@ -411,6 +397,7 @@ class Scaffold:
         """
         return self._method_route("PATCH", rule, options)
 
+    @setupmethod
     def route(self, rule: str, **options: t.Any) -> t.Callable[[F], F]:
         """Decorate a view function to register it with the given URL
         rule and options. Calls :meth:`add_url_rule`, which has more
@@ -510,6 +497,7 @@ class Scaffold:
         """
         raise NotImplementedError
 
+    @setupmethod
     def endpoint(self, endpoint: str) -> t.Callable:
         """Decorate a view function to register it for the given
         endpoint. Used if a rule is added without a ``view_func`` with
@@ -534,7 +522,7 @@ class Scaffold:
         return decorator
 
     @setupmethod
-    def before_request(self, f: BeforeRequestCallable) -> BeforeRequestCallable:
+    def before_request(self, f: ft.BeforeRequestCallable) -> ft.BeforeRequestCallable:
         """Register a function to run before each request.
 
         For example, this can be used to open a database connection, or
@@ -556,7 +544,7 @@ class Scaffold:
         return f
 
     @setupmethod
-    def after_request(self, f: AfterRequestCallable) -> AfterRequestCallable:
+    def after_request(self, f: ft.AfterRequestCallable) -> ft.AfterRequestCallable:
         """Register a function to run after each request to this object.
 
         The function is called with the response object, and must return
@@ -572,7 +560,7 @@ class Scaffold:
         return f
 
     @setupmethod
-    def teardown_request(self, f: TeardownCallable) -> TeardownCallable:
+    def teardown_request(self, f: ft.TeardownCallable) -> ft.TeardownCallable:
         """Register a function to be run at the end of each request,
         regardless of whether there was an exception or not.  These functions
         are executed when the request context is popped, even if not an
@@ -612,16 +600,16 @@ class Scaffold:
 
     @setupmethod
     def context_processor(
-        self, f: TemplateContextProcessorCallable
-    ) -> TemplateContextProcessorCallable:
+        self, f: ft.TemplateContextProcessorCallable
+    ) -> ft.TemplateContextProcessorCallable:
         """Registers a template context processor function."""
         self.template_context_processors[None].append(f)
         return f
 
     @setupmethod
     def url_value_preprocessor(
-        self, f: URLValuePreprocessorCallable
-    ) -> URLValuePreprocessorCallable:
+        self, f: ft.URLValuePreprocessorCallable
+    ) -> ft.URLValuePreprocessorCallable:
         """Register a URL value preprocessor function for all view
         functions in the application. These functions will be called before the
         :meth:`before_request` functions.
@@ -638,7 +626,7 @@ class Scaffold:
         return f
 
     @setupmethod
-    def url_defaults(self, f: URLDefaultCallable) -> URLDefaultCallable:
+    def url_defaults(self, f: ft.URLDefaultCallable) -> ft.URLDefaultCallable:
         """Callback function for URL defaults for all view functions of the
         application.  It's called with the endpoint and values and should
         update the values passed in place.
@@ -649,7 +637,7 @@ class Scaffold:
     @setupmethod
     def errorhandler(
         self, code_or_exception: t.Union[t.Type[Exception], int]
-    ) -> t.Callable[["ErrorHandlerCallable"], "ErrorHandlerCallable"]:
+    ) -> t.Callable[[ft.ErrorHandlerCallable], ft.ErrorHandlerCallable]:
         """Register a function to handle errors by code or exception class.
 
         A decorator that is used to register a function given an
@@ -679,7 +667,7 @@ class Scaffold:
                                   an arbitrary exception
         """
 
-        def decorator(f: "ErrorHandlerCallable") -> "ErrorHandlerCallable":
+        def decorator(f: ft.ErrorHandlerCallable) -> ft.ErrorHandlerCallable:
             self.register_error_handler(code_or_exception, f)
             return f
 
@@ -689,7 +677,7 @@ class Scaffold:
     def register_error_handler(
         self,
         code_or_exception: t.Union[t.Type[Exception], int],
-        f: "ErrorHandlerCallable",
+        f: ft.ErrorHandlerCallable,
     ) -> None:
         """Alternative error attach function to the :meth:`errorhandler`
         decorator that is more straightforward to use for non decorator

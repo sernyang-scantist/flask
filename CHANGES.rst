@@ -8,6 +8,7 @@ Unreleased
 -   Add new customization points to the ``Flask`` app object for many
     previously global behaviors.
 
+    -   ``flask.url_for`` will call ``app.url_for``. :issue:`4568`
     -   ``flask.abort`` will call ``app.aborter``.
         ``Flask.aborter_class`` and ``Flask.make_aborter`` can be used
         to customize this aborter. :issue:`4567`
@@ -15,6 +16,20 @@ Unreleased
 
 -   Refactor ``register_error_handler`` to consolidate error checking.
     Rewrite some error messages to be more consistent. :issue:`4559`
+-   Use Blueprint decorators and functions intended for setup after
+    registering the blueprint will show a warning. In the next version,
+    this will become an error just like the application setup methods.
+    :issue:`4571`
+
+
+Version 2.1.3
+-------------
+
+Unreleased
+
+-   Inline some optional imports that are only used for certain CLI
+    commands. :pr:`4606`
+-   Relax type annotation for ``after_request`` functions. :issue:`4600`
 
 
 Version 2.1.2
