@@ -18,7 +18,7 @@ pipeline {
 //             }
 //         }
         
-//         stage("Env Variables"){
+//         stage('Env Variables'){
 //             steps{
 //                 sh "printenv"
 //                 script {
@@ -46,5 +46,11 @@ pipeline {
 //                 echo "This is the git commit ${env.GIT_COMMIT}"
 //             }
 //         }
+        
+        stage('Run TestSigma Sanity on Production Test Plan') {
+            steps{
+                sh 'curl -X POST -H "Content-type: application/json" -H "Accept:application/json" -H "Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIwZTVmNzI3Ny01MDgzLTQ1OTYtYThlZi02ZGQ1MmViMTVjYmUiLCJkb21haW4iOiJzY2FudGlzdC5jb20iLCJ0ZW5hbnRJZCI6MzI0NDl9.i2pO5Z1vxCPPV209NShQYKYmhSjpGeBTWYLWrBmpEyJ-yZV32EknYFKQGescIiCF4CWgvzxjrCa69xF-5a3ujA" https://app.testsigma.com/api/v1/execution_results -d "{\"executionId\": \"506\"}"'
+            }
+        }
     }
 }
