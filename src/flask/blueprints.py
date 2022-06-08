@@ -392,7 +392,7 @@ class Blueprint(Scaffold):
         self,
         rule: str,
         endpoint: t.Optional[str] = None,
-        view_func: t.Optional[t.Callable] = None,
+        view_func: t.Optional[ft.ViewCallable] = None,
         provide_automatic_options: t.Optional[bool] = None,
         **options: t.Any,
     ) -> None:
@@ -543,7 +543,20 @@ class Blueprint(Scaffold):
     ) -> ft.BeforeFirstRequestCallable:
         """Like :meth:`Flask.before_first_request`.  Such a function is
         executed before the first request to the application.
+
+        .. deprecated:: 2.2
+            Will be removed in Flask 2.3. Run setup code when creating
+            the application instead.
         """
+        import warnings
+
+        warnings.warn(
+            "'before_app_first_request' is deprecated and will be"
+            " removed in Flask 2.3. Use 'record_once' instead to run"
+            " setup code when registering the blueprint.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.record_once(lambda s: s.app.before_first_request_funcs.append(f))
         return f
 
@@ -580,12 +593,14 @@ class Blueprint(Scaffold):
         return f
 
     @setupmethod
-    def app_errorhandler(self, code: t.Union[t.Type[Exception], int]) -> t.Callable:
+    def app_errorhandler(
+        self, code: t.Union[t.Type[Exception], int]
+    ) -> t.Callable[[ft.ErrorHandlerDecorator], ft.ErrorHandlerDecorator]:
         """Like :meth:`Flask.errorhandler` but for a blueprint.  This
         handler is used for all requests, even if outside of the blueprint.
         """
 
-        def decorator(f: ft.ErrorHandlerCallable) -> ft.ErrorHandlerCallable:
+        def decorator(f: ft.ErrorHandlerDecorator) -> ft.ErrorHandlerDecorator:
             self.record_once(lambda s: s.app.errorhandler(code)(f))
             return f
 

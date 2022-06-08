@@ -20,7 +20,11 @@ Unreleased
     registering the blueprint will show a warning. In the next version,
     this will become an error just like the application setup methods.
     :issue:`4571`
-
+-   ``before_first_request`` is deprecated. Run setup code when creating
+    the application instead. :issue:`4605`
+-   Added the ``View.init_every_request`` class attribute. If a view
+    subclass sets this to ``False``, the view will not create a new
+    instance on every request. :issue:`2520`.
 
 Version 2.1.3
 -------------
@@ -30,6 +34,8 @@ Unreleased
 -   Inline some optional imports that are only used for certain CLI
     commands. :pr:`4606`
 -   Relax type annotation for ``after_request`` functions. :issue:`4600`
+-   ``instance_path`` for namespace packages uses the path closest to
+    the imported submodule. :issue:`4600`
 
 
 Version 2.1.2
@@ -1030,8 +1036,7 @@ Released 2011-09-29, codename Rakija
     earlier feedback when users forget to import view code ahead of
     time.
 -   Added the ability to register callbacks that are only triggered once
-    at the beginning of the first request.
-    (:meth:`Flask.before_first_request`)
+    at the beginning of the first request. (``before_first_request``)
 -   Malformed JSON data will now trigger a bad request HTTP exception
     instead of a value error which usually would result in a 500
     internal server error if not handled. This is a backwards
