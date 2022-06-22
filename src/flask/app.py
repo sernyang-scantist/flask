@@ -5,11 +5,13 @@ import os
 import sys
 import typing as t
 import weakref
+from collections.abc import Iterator as _abc_Iterator
 from datetime import timedelta
 from itertools import chain
 from threading import Lock
 from types import TracebackType
 
+import click
 from werkzeug.datastructures import Headers
 from werkzeug.datastructures import ImmutableDict
 from werkzeug.exceptions import Aborter
@@ -23,6 +25,7 @@ from werkzeug.routing import MapAdapter
 from werkzeug.routing import RequestRedirect
 from werkzeug.routing import RoutingException
 from werkzeug.routing import Rule
+from werkzeug.serving import is_running_from_reloader
 from werkzeug.urls import url_quote
 from werkzeug.utils import redirect as _wz_redirect
 from werkzeug.wrappers import Response as BaseResponse
@@ -908,12 +911,18 @@ class Flask(Scaffold):
             The default port is now picked from the ``SERVER_NAME``
             variable.
         """
-        # Change this into a no-op if the server is invoked from the
-        # command line. Have a look at cli.py for more information.
+        # Ignore this call so that it doesn't start another server if
+        # the 'flask run' command is used.
         if os.environ.get("FLASK_RUN_FROM_CLI") == "true":
-            from .debughelpers import explain_ignored_app_run
+            if not is_running_from_reloader():
+                click.secho(
+                    " * Ignoring a call to 'app.run()', the server is"
+                    " already being run with the 'flask run' command.\n"
+                    "   Only call 'app.run()' in an 'if __name__ =="
+                    ' "__main__"\' guard.',
+                    fg="red",
+                )
 
-            explain_ignored_app_run()
             return
 
         if get_load_dotenv(load_dotenv):
@@ -1835,6 +1844,10 @@ class Flask(Scaffold):
             ``dict``
                 A dictionary that will be jsonify'd before being returned.
 
+            ``generator`` or ``iterator``
+                A generator that returns ``str`` or ``bytes`` to be
+                streamed as the response.
+
             ``tuple``
                 Either ``(body, status, headers)``, ``(body, status)``, or
                 ``(body, headers)``, where ``body`` is any of the other types
@@ -1853,6 +1866,12 @@ class Flask(Scaffold):
             :func:`callable`
                 The function is called as a WSGI application. The result is
                 used to create a response object.
+
+        .. versionchanged:: 2.2
+            A generator will be converted to a streaming response.
+
+        .. versionchanged:: 1.1
+            A dict will be converted to a JSON response.
 
         .. versionchanged:: 0.9
            Previously a tuple was interpreted as the arguments for the
@@ -1892,7 +1911,7 @@ class Flask(Scaffold):
 
         # make sure the body is an instance of the response class
         if not isinstance(rv, self.response_class):
-            if isinstance(rv, (str, bytes, bytearray)):
+            if isinstance(rv, (str, bytes, bytearray)) or isinstance(rv, _abc_Iterator):
                 # let the response class set the status and headers instead of
                 # waiting to do it manually, so that the class can handle any
                 # special logic

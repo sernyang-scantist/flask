@@ -5,6 +5,7 @@ import uuid
 import warnings
 import weakref
 from datetime import datetime
+from datetime import timezone
 from platform import python_implementation
 from threading import Thread
 
@@ -436,7 +437,7 @@ def test_session_expiration(app, client):
     assert "set-cookie" in rv.headers
     match = re.search(r"(?i)\bexpires=([^;]+)", rv.headers["set-cookie"])
     expires = parse_date(match.group())
-    expected = datetime.utcnow() + app.permanent_session_lifetime
+    expected = datetime.now(timezone.utc) + app.permanent_session_lifetime
     assert expires.year == expected.year
     assert expires.month == expected.month
     assert expires.day == expected.day
@@ -466,7 +467,7 @@ def test_session_stored_last(app, client):
 
 
 def test_session_special_types(app, client):
-    now = datetime.utcnow().replace(microsecond=0)
+    now = datetime.now(timezone.utc).replace(microsecond=0)
     the_uuid = uuid.uuid4()
 
     @app.route("/")
@@ -1273,6 +1274,11 @@ def test_make_response(app, req_ctx):
     rv = flask.make_response("W00t", 404)
     assert rv.status_code == 404
     assert rv.data == b"W00t"
+    assert rv.mimetype == "text/html"
+
+    rv = flask.make_response(c for c in "Hello")
+    assert rv.status_code == 200
+    assert rv.data == b"Hello"
     assert rv.mimetype == "text/html"
 
 

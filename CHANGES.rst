@@ -25,6 +25,24 @@ Unreleased
 -   Added the ``View.init_every_request`` class attribute. If a view
     subclass sets this to ``False``, the view will not create a new
     instance on every request. :issue:`2520`.
+-   A ``flask.cli.FlaskGroup`` Click group can be nested as a
+    sub-command in a custom CLI. :issue:`3263`
+-   Add ``--app``, ``--env``, and ``--debug`` options to the ``flask``
+    CLI, instead of requiring that they are set through environment
+    variables. :issue:`2836`
+-   Add ``--env-file`` option to the ``flask`` CLI. This allows
+    specifying a dotenv file to load in addition to ``.env`` and
+    ``.flaskenv``. :issue:`3108`
+-   It is no longer required to decorate custom CLI commands on
+    ``app.cli`` or ``blueprint.cli`` with ``@with_appcontext``, an app
+    context will already be active at that point. :issue:`2410`
+-   ``SessionInterface.get_expiration_time`` uses a timezone-aware
+    value. :pr:`4645`
+-   View functions can return generators directly instead of wrapping
+    them in a ``Response``. :pr:`4629`
+-   Add ``stream_template`` and ``stream_template_string`` functions to
+    render a template as a stream of pieces. :pr:`4629`
+
 
 Version 2.1.3
 -------------

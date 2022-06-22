@@ -48,9 +48,9 @@ def get_debug_flag() -> bool:
 
 
 def get_load_dotenv(default: bool = True) -> bool:
-    """Get whether the user has disabled loading dotenv files by setting
-    :envvar:`FLASK_SKIP_DOTENV`. The default is ``True``, load the
-    files.
+    """Get whether the user has disabled loading default dotenv files by
+    setting :envvar:`FLASK_SKIP_DOTENV`. The default is ``True``, load
+    the files.
 
     :param default: What to return if the env var isn't set.
     """
@@ -602,7 +602,8 @@ def send_from_directory(
     If the final path does not point to an existing regular file,
     raises a 404 :exc:`~werkzeug.exceptions.NotFound` error.
 
-    :param directory: The directory that ``path`` must be located under.
+    :param directory: The directory that ``path`` must be located under,
+        relative to the current application's root path.
     :param path: The path to the file to send, relative to
         ``directory``.
     :param kwargs: Arguments to pass to :func:`send_file`.
