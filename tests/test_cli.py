@@ -1,7 +1,6 @@
 # This file was part of Flask-CLI and was modified under the terms of
 # its Revised BSD License. Copyright © 2015 CERN.
 import os
-import platform
 import ssl
 import sys
 import types
@@ -13,12 +12,10 @@ import pytest
 from _pytest.monkeypatch import notset
 from click.testing import CliRunner
 
-from flask import _app_ctx_stack
 from flask import Blueprint
 from flask import current_app
 from flask import Flask
 from flask.cli import AppGroup
-from flask.cli import DispatchingApp
 from flask.cli import find_best_app
 from flask.cli import FlaskGroup
 from flask.cli import get_version
@@ -291,26 +288,6 @@ def test_scriptinfo(test_apps, monkeypatch):
     assert app.name == "testapp"
 
 
-@pytest.mark.xfail(platform.python_implementation() == "PyPy", reason="flaky on pypy")
-def test_lazy_load_error(monkeypatch):
-    """When using lazy loading, the correct exception should be
-    re-raised.
-    """
-
-    class BadExc(Exception):
-        pass
-
-    def bad_load():
-        raise BadExc
-
-    lazy = DispatchingApp(bad_load, use_eager_loading=False)
-
-    # reduce flakiness by waiting for the internal loading lock
-    with lazy._lock:
-        with pytest.raises(BadExc):
-            lazy._flush_bg_loading_exception()
-
-
 def test_app_cli_has_app_context(app, runner):
     def _param_cb(ctx, param, value):
         # current_app should be available in parameter callbacks
@@ -322,13 +299,11 @@ def test_app_cli_has_app_context(app, runner):
         app = click.get_current_context().obj.load_app()
         # the loaded app should be the same as current_app
         same_app = current_app._get_current_object() is app
-        # only one app context should be pushed
-        stack_size = len(_app_ctx_stack._local.stack)
-        return same_app, stack_size, value
+        return same_app, value
 
     cli = FlaskGroup(create_app=lambda: app)
     result = runner.invoke(cli, ["check", "x"], standalone_mode=False)
-    assert result.return_value == (True, 1, True)
+    assert result.return_value == (True, True)
 
 
 def test_with_appcontext(runner):
@@ -456,22 +431,23 @@ def test_help_echo_exception():
 
 class TestRoutes:
     @pytest.fixture
-    def invoke(self, runner):
-        def create_app():
-            app = Flask(__name__)
-            app.testing = True
+    def app(self):
+        app = Flask(__name__)
+        app.testing = True
 
-            @app.route("/get_post/<int:x>/<int:y>", methods=["GET", "POST"])
-            def yyy_get_post(x, y):
-                pass
+        @app.route("/get_post/<int:x>/<int:y>", methods=["GET", "POST"])
+        def yyy_get_post(x, y):
+            pass
 
-            @app.route("/zzz_post", methods=["POST"])
-            def aaa_post():
-                pass
+        @app.route("/zzz_post", methods=["POST"])
+        def aaa_post():
+            pass
 
-            return app
+        return app
 
-        cli = FlaskGroup(create_app=create_app)
+    @pytest.fixture
+    def invoke(self, app, runner):
+        cli = FlaskGroup(create_app=lambda: app)
         return partial(runner.invoke, cli)
 
     @pytest.fixture
@@ -496,7 +472,7 @@ class TestRoutes:
         assert result.exit_code == 0
         self.expect_order(["aaa_post", "static", "yyy_get_post"], result.output)
 
-    def test_sort(self, invoke):
+    def test_sort(self, app, invoke):
         default_output = invoke(["routes"]).output
         endpoint_output = invoke(["routes", "-s", "endpoint"]).output
         assert default_output == endpoint_output
@@ -508,10 +484,8 @@ class TestRoutes:
             ["yyy_get_post", "static", "aaa_post"],
             invoke(["routes", "-s", "rule"]).output,
         )
-        self.expect_order(
-            ["aaa_post", "yyy_get_post", "static"],
-            invoke(["routes", "-s", "match"]).output,
-        )
+        match_order = [r.endpoint for r in app.url_map.iter_rules()]
+        self.expect_order(match_order, invoke(["routes", "-s", "match"]).output)
 
     def test_all_methods(self, invoke):
         output = invoke(["routes"]).output

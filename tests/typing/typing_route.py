@@ -3,6 +3,8 @@ from __future__ import annotations
 import typing as t
 from http import HTTPStatus
 
+import typing_extensions as te
+
 from flask import Flask
 from flask import jsonify
 from flask import stream_template
@@ -25,7 +27,26 @@ def hello_bytes() -> bytes:
 
 @app.route("/json")
 def hello_json() -> Response:
-    return jsonify({"response": "Hello, World!"})
+    return jsonify("Hello, World!")
+
+
+@app.route("/json/dict")
+def hello_json_dict() -> t.Dict[str, t.Any]:
+    return {"response": "Hello, World!"}
+
+
+@app.route("/json/dict")
+def hello_json_list() -> t.List[t.Any]:
+    return [{"message": "Hello"}, {"message": "World"}]
+
+
+class StatusJSON(te.TypedDict):
+    status: str
+
+
+@app.route("/typed-dict")
+def typed_dict() -> StatusJSON:
+    return {"status": "ok"}
 
 
 @app.route("/generator")
@@ -72,6 +93,11 @@ def return_template(name: str | None = None) -> str:
 @app.route("/template")
 def return_template_stream() -> t.Iterator[str]:
     return stream_template("index.html", name="Hello")
+
+
+@app.route("/async")
+async def async_route() -> str:
+    return "Hello"
 
 
 class RenderTemplateView(View):

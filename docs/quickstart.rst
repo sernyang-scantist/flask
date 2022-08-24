@@ -46,7 +46,7 @@ is with the ``-app`` option.
 .. code-block:: text
 
     $ flask --app hello run
-     * Serving Flask app 'hello' (lazy loading)
+     * Serving Flask app 'hello'
      * Running on http://127.0.0.1:5000 (Press CTRL+C to quit)
 
 .. admonition:: Application Discovery Behavior
@@ -104,14 +104,12 @@ error occurs during a request.
     security risk. Do not run the development server or debugger in a
     production environment.
 
-To enable all development features, set the ``--env`` option to
-``development``.
+To enable debug mode, use the ``--debug`` option.
 
 .. code-block:: text
 
-    $ flask --app hello --env development run
-     * Serving Flask app 'hello' (lazy loading)
-     * Environment: development
+    $ flask --app hello --debug run
+     * Serving Flask app 'hello'
      * Debug mode: on
      * Running on http://127.0.0.1:5000 (Press CTRL+C to quit)
      * Restarting with stat
@@ -120,8 +118,7 @@ To enable all development features, set the ``--env`` option to
 
 See also:
 
--   :doc:`/server` and :doc:`/cli` for information about running in
-    development mode.
+-   :doc:`/server` and :doc:`/cli` for information about running in debug mode.
 -   :doc:`/debugging` for information about using the built-in debugger
     and other debuggers.
 -   :doc:`/logging` and :doc:`/errorhandling` to log errors and display
@@ -313,6 +310,24 @@ of the :meth:`~flask.Flask.route` decorator to handle different HTTP methods.
         else:
             return show_the_login_form()
 
+The example above keeps all methods for the route within one function,
+which can be useful if each part uses some common data.
+
+You can also separate views for different methods into different
+functions. Flask provides a shortcut for decorating such routes with
+:meth:`~flask.Flask.get`, :meth:`~flask.Flask.post`, etc. for each
+common HTTP method.
+
+.. code-block:: python
+
+    @app.get('/login')
+    def login_get():
+        return show_the_login_form()
+
+    @app.post('/login')
+    def login_post():
+        return do_the_login()
+
 If ``GET`` is present, Flask automatically adds support for the ``HEAD`` method
 and handles ``HEAD`` requests according to the `HTTP RFC`_. Likewise,
 ``OPTIONS`` is automatically implemented for you.
@@ -341,6 +356,14 @@ Generating HTML from within Python is not fun, and actually pretty
 cumbersome because you have to do the HTML escaping on your own to keep
 the application secure.  Because of that Flask configures the `Jinja2
 <https://palletsprojects.com/p/jinja/>`_ template engine for you automatically.
+
+Templates can be used to generate any type of text file. For web applications, you'll
+primarily be generating HTML pages, but you can also generate markdown, plain text for
+emails, any anything else.
+
+For a reference to HTML, CSS, and other web APIs, use the `MDN Web Docs`_.
+
+.. _MDN Web Docs: https://developer.mozilla.org/
 
 To render a template you can use the :func:`~flask.render_template`
 method.  All you have to do is provide the name of the template and the
@@ -663,22 +686,25 @@ The return value from a view function is automatically converted into
 a response object for you. If the return value is a string it's
 converted into a response object with the string as response body, a
 ``200 OK`` status code and a :mimetype:`text/html` mimetype. If the
-return value is a dict, :func:`jsonify` is called to produce a response.
-The logic that Flask applies to converting return values into response
-objects is as follows:
+return value is a dict or list, :func:`jsonify` is called to produce a
+response. The logic that Flask applies to converting return values into
+response objects is as follows:
 
 1.  If a response object of the correct type is returned it's directly
     returned from the view.
 2.  If it's a string, a response object is created with that data and
     the default parameters.
-3.  If it's a dict, a response object is created using ``jsonify``.
-4.  If a tuple is returned the items in the tuple can provide extra
+3.  If it's an iterator or generator returning strings or bytes, it is
+    treated as a streaming response.
+4.  If it's a dict or list, a response object is created using
+    :func:`~flask.json.jsonify`.
+5.  If a tuple is returned the items in the tuple can provide extra
     information. Such tuples have to be in the form
     ``(response, status)``, ``(response, headers)``, or
     ``(response, status, headers)``. The ``status`` value will override
     the status code and ``headers`` can be a list or dictionary of
     additional header values.
-5.  If none of that works, Flask will assume the return value is a
+6.  If none of that works, Flask will assume the return value is a
     valid WSGI application and convert that into a response object.
 
 If you want to get hold of the resulting response object inside the view
@@ -709,8 +735,8 @@ APIs with JSON
 ``````````````
 
 A common response format when writing an API is JSON. It's easy to get
-started writing such an API with Flask. If you return a ``dict`` from a
-view, it will be converted to a JSON response.
+started writing such an API with Flask. If you return a ``dict`` or
+``list`` from a view, it will be converted to a JSON response.
 
 .. code-block:: python
 
@@ -723,20 +749,20 @@ view, it will be converted to a JSON response.
             "image": url_for("user_image", filename=user.image),
         }
 
-Depending on your API design, you may want to create JSON responses for
-types other than ``dict``. In that case, use the
-:func:`~flask.json.jsonify` function, which will serialize any supported
-JSON data type. Or look into Flask community extensions that support
-more complex applications.
-
-.. code-block:: python
-
-    from flask import jsonify
-
     @app.route("/users")
     def users_api():
         users = get_all_users()
-        return jsonify([user.to_json() for user in users])
+        return [user.to_json() for user in users]
+
+This is a shortcut to passing the data to the
+:func:`~flask.json.jsonify` function, which will serialize any supported
+JSON data type. That means that all the data in the dict or list must be
+JSON serializable.
+
+For complex types such as database models, you'll want to use a
+serialization library to convert the data to valid JSON types first.
+There are many serialization libraries and Flask API extensions
+maintained by the community that support more complex applications.
 
 
 .. _sessions:

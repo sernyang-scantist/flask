@@ -125,10 +125,9 @@ implementation that Flask is using.
 
 .. admonition:: Notice
 
-   The ``PERMANENT_SESSION_LIFETIME`` config key can also be an integer
-   starting with Flask 0.8.  Either catch this down yourself or use
-   the :attr:`~flask.Flask.permanent_session_lifetime` attribute on the
-   app which converts the result to an integer automatically.
+    The :data:`PERMANENT_SESSION_LIFETIME` config can be an integer or ``timedelta``.
+    The :attr:`~flask.Flask.permanent_session_lifetime` attribute is always a
+    ``timedelta``.
 
 
 Test Client
@@ -236,21 +235,15 @@ JSON Support
 
 .. module:: flask.json
 
-Flask uses the built-in :mod:`json` module for handling JSON. It will
-use the current blueprint's or application's JSON encoder and decoder
-for easier customization. By default it handles some extra data types:
+Flask uses Python's built-in :mod:`json` module for handling JSON by
+default. The JSON implementation can be changed by assigning a different
+provider to :attr:`flask.Flask.json_provider_class` or
+:attr:`flask.Flask.json`. The functions provided by ``flask.json`` will
+use methods on ``app.json`` if an app context is active.
 
--   :class:`datetime.datetime` and :class:`datetime.date` are serialized
-    to :rfc:`822` strings. This is the same as the HTTP date format.
--   :class:`uuid.UUID` is serialized to a string.
--   :class:`dataclasses.dataclass` is passed to
-    :func:`dataclasses.asdict`.
--   :class:`~markupsafe.Markup` (or any object with a ``__html__``
-    method) will call the ``__html__`` method to get a string.
-
-Jinja's ``|tojson`` filter is configured to use Flask's :func:`dumps`
-function. The filter marks the output with ``|safe`` automatically. Use
-the filter to render data inside ``<script>`` tags.
+Jinja's ``|tojson`` filter is configured to use the app's JSON provider.
+The filter marks the output with ``|safe``. Use it to render data inside
+HTML ``<script>`` tags.
 
 .. sourcecode:: html+jinja
 
@@ -268,6 +261,14 @@ the filter to render data inside ``<script>`` tags.
 .. autofunction:: loads
 
 .. autofunction:: load
+
+.. autoclass:: flask.json.provider.JSONProvider
+    :members:
+    :member-order: bysource
+
+.. autoclass:: flask.json.provider.DefaultJSONProvider
+    :members:
+    :member-order: bysource
 
 .. autoclass:: JSONEncoder
    :members:
@@ -311,56 +312,28 @@ Useful Internals
 .. autoclass:: flask.ctx.RequestContext
    :members:
 
-.. data:: _request_ctx_stack
+.. data:: flask.globals.request_ctx
 
-    The internal :class:`~werkzeug.local.LocalStack` that holds
-    :class:`~flask.ctx.RequestContext` instances. Typically, the
-    :data:`request` and :data:`session` proxies should be accessed
-    instead of the stack. It may be useful to access the stack in
-    extension code.
+    The current :class:`~flask.ctx.RequestContext`. If a request context
+    is not active, accessing attributes on this proxy will raise a
+    ``RuntimeError``.
 
-    The following attributes are always present on each layer of the
-    stack:
-
-    `app`
-      the active Flask application.
-
-    `url_adapter`
-      the URL adapter that was used to match the request.
-
-    `request`
-      the current request object.
-
-    `session`
-      the active session object.
-
-    `g`
-      an object with all the attributes of the :data:`flask.g` object.
-
-    `flashes`
-      an internal cache for the flashed messages.
-
-    Example usage::
-
-        from flask import _request_ctx_stack
-
-        def get_session():
-            ctx = _request_ctx_stack.top
-            if ctx is not None:
-                return ctx.session
+    This is an internal object that is essential to how Flask handles
+    requests. Accessing this should not be needed in most cases. Most
+    likely you want :data:`request` and :data:`session` instead.
 
 .. autoclass:: flask.ctx.AppContext
    :members:
 
-.. data:: _app_ctx_stack
+.. data:: flask.globals.app_ctx
 
-    The internal :class:`~werkzeug.local.LocalStack` that holds
-    :class:`~flask.ctx.AppContext` instances. Typically, the
-    :data:`current_app` and :data:`g` proxies should be accessed instead
-    of the stack. Extensions can access the contexts on the stack as a
-    namespace to store data.
+    The current :class:`~flask.ctx.AppContext`. If an app context is not
+    active, accessing attributes on this proxy will raise a
+    ``RuntimeError``.
 
-    .. versionadded:: 0.9
+    This is an internal object that is essential to how Flask handles
+    requests. Accessing this should not be needed in most cases. Most
+    likely you want :data:`current_app` and :data:`g` instead.
 
 .. autoclass:: flask.blueprints.BlueprintSetupState
    :members:

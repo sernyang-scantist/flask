@@ -1,13 +1,13 @@
 import importlib.util
+import json
 import os
 import pathlib
 import pkgutil
 import sys
 import typing as t
 from collections import defaultdict
+from datetime import timedelta
 from functools import update_wrapper
-from json import JSONDecoder
-from json import JSONEncoder
 
 from jinja2 import FileSystemLoader
 from werkzeug.exceptions import default_exceptions
@@ -28,6 +28,18 @@ if t.TYPE_CHECKING:  # pragma: no cover
 _sentinel = object()
 
 F = t.TypeVar("F", bound=t.Callable[..., t.Any])
+T_after_request = t.TypeVar("T_after_request", bound=ft.AfterRequestCallable)
+T_before_request = t.TypeVar("T_before_request", bound=ft.BeforeRequestCallable)
+T_error_handler = t.TypeVar("T_error_handler", bound=ft.ErrorHandlerCallable)
+T_teardown = t.TypeVar("T_teardown", bound=ft.TeardownCallable)
+T_template_context_processor = t.TypeVar(
+    "T_template_context_processor", bound=ft.TemplateContextProcessorCallable
+)
+T_url_defaults = t.TypeVar("T_url_defaults", bound=ft.URLDefaultCallable)
+T_url_value_preprocessor = t.TypeVar(
+    "T_url_value_preprocessor", bound=ft.URLValuePreprocessorCallable
+)
+T_route = t.TypeVar("T_route", bound=ft.RouteCallable)
 
 
 def setupmethod(f: F) -> F:
@@ -64,11 +76,17 @@ class Scaffold:
 
     #: JSON encoder class used by :func:`flask.json.dumps`. If a
     #: blueprint sets this, it will be used instead of the app's value.
-    json_encoder: t.Optional[t.Type[JSONEncoder]] = None
+    #:
+    #: .. deprecated:: 2.2
+    #:      Will be removed in Flask 2.3.
+    json_encoder: t.Union[t.Type[json.JSONEncoder], None] = None
 
     #: JSON decoder class used by :func:`flask.json.loads`. If a
     #: blueprint sets this, it will be used instead of the app's value.
-    json_decoder: t.Optional[t.Type[JSONDecoder]] = None
+    #:
+    #: .. deprecated:: 2.2
+    #:      Will be removed in Flask 2.3.
+    json_decoder: t.Union[t.Type[json.JSONDecoder], None] = None
 
     def __init__(
         self,
@@ -286,12 +304,15 @@ class Scaffold:
 
         .. versionadded:: 0.9
         """
-        value = current_app.send_file_max_age_default
+        value = current_app.config["SEND_FILE_MAX_AGE_DEFAULT"]
 
         if value is None:
             return None
 
-        return int(value.total_seconds())
+        if isinstance(value, timedelta):
+            return int(value.total_seconds())
+
+        return value
 
     def send_static_file(self, filename: str) -> "Response":
         """The view function used to serve files from
@@ -352,16 +373,14 @@ class Scaffold:
         method: str,
         rule: str,
         options: dict,
-    ) -> t.Callable[[ft.RouteDecorator], ft.RouteDecorator]:
+    ) -> t.Callable[[T_route], T_route]:
         if "methods" in options:
             raise TypeError("Use the 'route' decorator to use the 'methods' argument.")
 
         return self.route(rule, methods=[method], **options)
 
     @setupmethod
-    def get(
-        self, rule: str, **options: t.Any
-    ) -> t.Callable[[ft.RouteDecorator], ft.RouteDecorator]:
+    def get(self, rule: str, **options: t.Any) -> t.Callable[[T_route], T_route]:
         """Shortcut for :meth:`route` with ``methods=["GET"]``.
 
         .. versionadded:: 2.0
@@ -369,9 +388,7 @@ class Scaffold:
         return self._method_route("GET", rule, options)
 
     @setupmethod
-    def post(
-        self, rule: str, **options: t.Any
-    ) -> t.Callable[[ft.RouteDecorator], ft.RouteDecorator]:
+    def post(self, rule: str, **options: t.Any) -> t.Callable[[T_route], T_route]:
         """Shortcut for :meth:`route` with ``methods=["POST"]``.
 
         .. versionadded:: 2.0
@@ -379,9 +396,7 @@ class Scaffold:
         return self._method_route("POST", rule, options)
 
     @setupmethod
-    def put(
-        self, rule: str, **options: t.Any
-    ) -> t.Callable[[ft.RouteDecorator], ft.RouteDecorator]:
+    def put(self, rule: str, **options: t.Any) -> t.Callable[[T_route], T_route]:
         """Shortcut for :meth:`route` with ``methods=["PUT"]``.
 
         .. versionadded:: 2.0
@@ -389,9 +404,7 @@ class Scaffold:
         return self._method_route("PUT", rule, options)
 
     @setupmethod
-    def delete(
-        self, rule: str, **options: t.Any
-    ) -> t.Callable[[ft.RouteDecorator], ft.RouteDecorator]:
+    def delete(self, rule: str, **options: t.Any) -> t.Callable[[T_route], T_route]:
         """Shortcut for :meth:`route` with ``methods=["DELETE"]``.
 
         .. versionadded:: 2.0
@@ -399,9 +412,7 @@ class Scaffold:
         return self._method_route("DELETE", rule, options)
 
     @setupmethod
-    def patch(
-        self, rule: str, **options: t.Any
-    ) -> t.Callable[[ft.RouteDecorator], ft.RouteDecorator]:
+    def patch(self, rule: str, **options: t.Any) -> t.Callable[[T_route], T_route]:
         """Shortcut for :meth:`route` with ``methods=["PATCH"]``.
 
         .. versionadded:: 2.0
@@ -409,9 +420,7 @@ class Scaffold:
         return self._method_route("PATCH", rule, options)
 
     @setupmethod
-    def route(
-        self, rule: str, **options: t.Any
-    ) -> t.Callable[[ft.RouteDecorator], ft.RouteDecorator]:
+    def route(self, rule: str, **options: t.Any) -> t.Callable[[T_route], T_route]:
         """Decorate a view function to register it with the given URL
         rule and options. Calls :meth:`add_url_rule`, which has more
         details about the implementation.
@@ -435,7 +444,7 @@ class Scaffold:
             :class:`~werkzeug.routing.Rule` object.
         """
 
-        def decorator(f: ft.RouteDecorator) -> ft.RouteDecorator:
+        def decorator(f: T_route) -> T_route:
             endpoint = options.pop("endpoint", None)
             self.add_url_rule(rule, endpoint, f, **options)
             return f
@@ -447,7 +456,7 @@ class Scaffold:
         self,
         rule: str,
         endpoint: t.Optional[str] = None,
-        view_func: t.Optional[ft.ViewCallable] = None,
+        view_func: t.Optional[ft.RouteCallable] = None,
         provide_automatic_options: t.Optional[bool] = None,
         **options: t.Any,
     ) -> None:
@@ -511,7 +520,7 @@ class Scaffold:
         raise NotImplementedError
 
     @setupmethod
-    def endpoint(self, endpoint: str) -> t.Callable:
+    def endpoint(self, endpoint: str) -> t.Callable[[F], F]:
         """Decorate a view function to register it for the given
         endpoint. Used if a rule is added without a ``view_func`` with
         :meth:`add_url_rule`.
@@ -528,14 +537,14 @@ class Scaffold:
             function.
         """
 
-        def decorator(f):
+        def decorator(f: F) -> F:
             self.view_functions[endpoint] = f
             return f
 
         return decorator
 
     @setupmethod
-    def before_request(self, f: ft.BeforeRequestCallable) -> ft.BeforeRequestCallable:
+    def before_request(self, f: T_before_request) -> T_before_request:
         """Register a function to run before each request.
 
         For example, this can be used to open a database connection, or
@@ -557,7 +566,7 @@ class Scaffold:
         return f
 
     @setupmethod
-    def after_request(self, f: ft.AfterRequestCallable) -> ft.AfterRequestCallable:
+    def after_request(self, f: T_after_request) -> T_after_request:
         """Register a function to run after each request to this object.
 
         The function is called with the response object, and must return
@@ -573,56 +582,48 @@ class Scaffold:
         return f
 
     @setupmethod
-    def teardown_request(self, f: ft.TeardownCallable) -> ft.TeardownCallable:
-        """Register a function to be run at the end of each request,
-        regardless of whether there was an exception or not.  These functions
-        are executed when the request context is popped, even if not an
-        actual request was performed.
+    def teardown_request(self, f: T_teardown) -> T_teardown:
+        """Register a function to be called when the request context is
+        popped. Typically this happens at the end of each request, but
+        contexts may be pushed manually as well during testing.
 
-        Example::
+        .. code-block:: python
 
-            ctx = app.test_request_context()
-            ctx.push()
-            ...
-            ctx.pop()
+            with app.test_request_context():
+                ...
 
-        When ``ctx.pop()`` is executed in the above example, the teardown
-        functions are called just before the request context moves from the
-        stack of active contexts.  This becomes relevant if you are using
-        such constructs in tests.
+        When the ``with`` block exits (or ``ctx.pop()`` is called), the
+        teardown functions are called just before the request context is
+        made inactive.
 
-        Teardown functions must avoid raising exceptions. If
-        they execute code that might fail they
-        will have to surround the execution of that code with try/except
-        statements and log any errors.
+        When a teardown function was called because of an unhandled
+        exception it will be passed an error object. If an
+        :meth:`errorhandler` is registered, it will handle the exception
+        and the teardown will not receive it.
 
-        When a teardown function was called because of an exception it will
-        be passed an error object.
+        Teardown functions must avoid raising exceptions. If they
+        execute code that might fail they must surround that code with a
+        ``try``/``except`` block and log any errors.
 
         The return values of teardown functions are ignored.
-
-        .. admonition:: Debug Note
-
-           In debug mode Flask will not tear down a request on an exception
-           immediately.  Instead it will keep it alive so that the interactive
-           debugger can still access it.  This behavior can be controlled
-           by the ``PRESERVE_CONTEXT_ON_EXCEPTION`` configuration variable.
         """
         self.teardown_request_funcs.setdefault(None, []).append(f)
         return f
 
     @setupmethod
     def context_processor(
-        self, f: ft.TemplateContextProcessorCallable
-    ) -> ft.TemplateContextProcessorCallable:
+        self,
+        f: T_template_context_processor,
+    ) -> T_template_context_processor:
         """Registers a template context processor function."""
         self.template_context_processors[None].append(f)
         return f
 
     @setupmethod
     def url_value_preprocessor(
-        self, f: ft.URLValuePreprocessorCallable
-    ) -> ft.URLValuePreprocessorCallable:
+        self,
+        f: T_url_value_preprocessor,
+    ) -> T_url_value_preprocessor:
         """Register a URL value preprocessor function for all view
         functions in the application. These functions will be called before the
         :meth:`before_request` functions.
@@ -639,7 +640,7 @@ class Scaffold:
         return f
 
     @setupmethod
-    def url_defaults(self, f: ft.URLDefaultCallable) -> ft.URLDefaultCallable:
+    def url_defaults(self, f: T_url_defaults) -> T_url_defaults:
         """Callback function for URL defaults for all view functions of the
         application.  It's called with the endpoint and values and should
         update the values passed in place.
@@ -650,7 +651,7 @@ class Scaffold:
     @setupmethod
     def errorhandler(
         self, code_or_exception: t.Union[t.Type[Exception], int]
-    ) -> t.Callable[[ft.ErrorHandlerDecorator], ft.ErrorHandlerDecorator]:
+    ) -> t.Callable[[T_error_handler], T_error_handler]:
         """Register a function to handle errors by code or exception class.
 
         A decorator that is used to register a function given an
@@ -680,7 +681,7 @@ class Scaffold:
                                   an arbitrary exception
         """
 
-        def decorator(f: ft.ErrorHandlerDecorator) -> ft.ErrorHandlerDecorator:
+        def decorator(f: T_error_handler) -> T_error_handler:
             self.register_error_handler(code_or_exception, f)
             return f
 
